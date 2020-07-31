@@ -34,3 +34,10 @@ class SafeWay:
             return element
         except TimeoutException:
             print("Timedout")
+
+    def add_item(self, item):
+        search = self.driver.find_element_by_id('skip-main-content')
+        search.clear()
+        search.send_keys(item)
+        search.send_keys(Keys.ENTER)
+        self.driver.find_element_by_id('addButton').click()
