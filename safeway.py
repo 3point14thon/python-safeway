@@ -40,4 +40,7 @@ class SafeWay:
         search.clear()
         search.send_keys(item)
         search.send_keys(Keys.ENTER)
-        self.driver.find_element_by_id('addButton').click()
+        sleep(30)
+        products = self.driver.find_elements_by_class_name('product-title')
+        product_id = products[0].get_attribute('id')
+        self.driver.find_element_by_css_selector('#' + product_id + '-qty > div:nth-child(1) > div:nth-child(1) > div:nth-child(1)').click()
