@@ -1,3 +1,4 @@
+import re
 from time import sleep
 import selenium.webdriver
 from selenium.webdriver.common.keys import Keys
@@ -35,12 +36,28 @@ class SafeWay:
         except TimeoutException:
             print("Timedout")
 
-    def add_item(self, item):
+    def add_item(self, item, amount, unit):
+        self.find_item(item)
+        products = self.driver.find_elements_by_class_name('product-title')
+        #optimize product selection here
+        qty = self.determine_qty(products.text)
+        product_id = products[0].get_attribute('id')
+        self.driver.find_element_by_css_selector('#' + product_id + '-qty > div:nth-child(1) > div:nth-child(1) > div:nth-child(1)').click()
+
+    def find_item(self, item):
         search = self.driver.find_element_by_id('skip-main-content')
         search.clear()
         search.send_keys(item)
         search.send_keys(Keys.ENTER)
-        sleep(30)
-        products = self.driver.find_elements_by_class_name('product-title')
-        product_id = products[0].get_attribute('id')
-        self.driver.find_element_by_css_selector('#' + product_id + '-qty > div:nth-child(1) > div:nth-child(1) > div:nth-child(1)').click()
+        sleep(5)
+
+    def determine_qty(self, product_txt):
+        pattern = '.+- (\d+)-?(\d+)?([^\(]*)'
+        item_info = re.split(pattern, products.text)[1:-1]
+        if not len(item_info):
+            #assume produce, use density of water to approximate qty or use qty directly
+        elif item_info[1]:
+            qty, amount, unit = item_info
+        else:
+            amount, _, unit = item_info
+
