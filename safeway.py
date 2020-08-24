@@ -1,4 +1,5 @@
 import re
+from math import ceil
 from time import sleep
 import selenium.webdriver
 from selenium.webdriver.common.keys import Keys
@@ -6,6 +7,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
+from unitconvert import massunits, volumeunits
 
 
 class SafeWay:
@@ -40,9 +42,16 @@ class SafeWay:
         self.find_item(item)
         products = self.driver.find_elements_by_class_name('product-title')
         #optimize product selection here
-        qty = self.determine_qty(products.text)
+        #qty = self.determine_qty(products.text, amount, unit)
         product_id = products[0].get_attribute('id')
         self.driver.find_element_by_css_selector('#' + product_id + '-qty > div:nth-child(1) > div:nth-child(1) > div:nth-child(1)').click()
+        self.element_getter(By.ID, 'qtyInfo_' + product_id[2:], 10).click()
+        product = self.driver.find_element_by_id('qtyInfoControl_' + product_id[2:])
+        qty = amount
+        product.send_keys(str(qty))
+        update = self.driver.find_element_by_class_name('specify-quantity-more.update-button')
+        update.click()
+        update.click()
 
     def find_item(self, item):
         search = self.driver.find_element_by_id('skip-main-content')
@@ -51,13 +60,24 @@ class SafeWay:
         search.send_keys(Keys.ENTER)
         sleep(5)
 
-    def determine_qty(self, product_txt):
+    def parse_item_txt(self, product_text):
         pattern = '.+- (\d+)-?(\d+)?([^\(]*)'
-        item_info = re.split(pattern, products.text)[1:-1]
+        item_info = re.split(pattern, product_text)[1:-1]
         if not len(item_info):
-            #assume produce, use density of water to approximate qty or use qty directly
+            return 1, product_text
         elif item_info[1]:
             qty, amount, unit = item_info
+            return int(qty) * float(amount), unit
         else:
             amount, _, unit = item_info
+            return float(amount), unit
 
+    def determine_qty(self, product_txt, purchase_amount, purchase_unit):
+        item_amount, item_unit = self.parse_item_txt(product_txt)
+        if purchase_unit in volumeunits.VolumeUnit(0, '_', '_').units:
+            item_amount = volumeunits.VolumeUnit(item_amount, item_unit, purchase_unit)
+        elif purchase_unit in massunits.MassUnit(0, '_', '_').units:
+            item_amount = massunits.MassUnit(item_amount, item_unit, purchase_unit)
+        else:
+            return item_amount
+        return ceil(item_amount/purchase_amount)
