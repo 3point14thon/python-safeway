@@ -83,4 +83,4 @@ class SafeWay:
             item_amount = massunits.MassUnit(item_amount, item_unit, purchase_unit)
         else:
             return item_amount
-        return ceil(item_amount.doconvert()/purchase_amount)
+        return ceil(purchase_amount / item_amount.doconvert())
