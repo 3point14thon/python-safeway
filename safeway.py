@@ -10,7 +10,6 @@ from selenium.common.exceptions import TimeoutException
 from unitconvert import massunits, volumeunits
 from unit_homogenizer import homogenize_unit
 
-
 class SafeWay:
 
     def __init__(self):
@@ -41,18 +40,12 @@ class SafeWay:
 
     def add_item(self, item, amount, unit):
         self.find_item(item)
-        products = self.driver.find_elements_by_class_name('product-title')
-        #optimize product selection here
+        title_els = self.driver.find_elements_by_class_name('product-title')
+        products = [self.mk_product_dict(prdct) for prdct in title_els]
+        # optimize product selection here
         product = products[0]
-        qty = self.determine_qty(product.text, amount, unit)
-        product_id = product.get_attribute('id')
-        self.driver.find_element_by_css_selector('#' + product_id + '-qty > div:nth-child(1) > div:nth-child(1) > div:nth-child(1)').click()
-        self.element_getter(By.ID, 'qtyInfo_' + product_id[2:], 10).click()
-        product = self.driver.find_element_by_id('qtyInfoControl_' + product_id[2:])
-        product.send_keys(str(qty))
-        update = self.driver.find_element_by_class_name('specify-quantity-more.update-button')
-        update.click()
-        update.click()
+        qty = self.determine_qty(product, amount, unit)
+        self.get_qty(product, qty)
 
     def find_item(self, item):
         search = self.driver.find_element_by_id('skip-main-content')
@@ -61,26 +54,52 @@ class SafeWay:
         search.send_keys(Keys.ENTER)
         sleep(5)
 
-    def parse_item_txt(self, product_text):
-        pattern = '.+- (\d*\.?\d*)-?(\d*\.?\d*)?([^\(]*)'
-        item_info = re.split(pattern, product_text)[1:-1]
-        if not len(item_info):
-            return 1, product_text
-        elif item_info[1]:
-            qty, amount, unit = item_info
-            return int(qty) * float(amount), unit
-        else:
-            amount, _, unit = item_info
-            return float(amount), unit
-
-    def determine_qty(self, product_txt, purchase_amount, purchase_unit):
+    def determine_qty(self, product, purchase_amount, purchase_unit):
         purchase_unit = homogenize_unit(purchase_unit)
-        item_amount, item_unit = self.parse_item_txt(product_txt)
-        item_unit = homogenize_unit(item_unit)
-        if purchase_unit in volumeunits.VolumeUnit(0, '_', '_').units:
-            item_amount = volumeunits.VolumeUnit(item_amount, item_unit, purchase_unit)
-        elif purchase_unit in massunits.MassUnit(0, '_', '_').units:
+        vol_units = volumeunits.VolumeUnit(0, '_', '_').units
+        mass_units = massunits.MassUnit(0, '_', '_').units
+        item_unit = product['amount'][1]
+        item_amount = product['amount'][0]
+        if purchase_unit in mass_units:
             item_amount = massunits.MassUnit(item_amount, item_unit, purchase_unit)
+        elif purchase_unit in vol_units:
+            if item_unit in vol_units:
+                item_amount = volumeunits.VolumeUnit(item_amount, item_unit, purchase_unit)
+            else:
+                g = massunits.MassUnit(item_amount, item_unit, 'g').doconvert()
+                item_amount = volumeunits.VolumeUnit(g, 'ml', purchase_unit)
         else:
-            return item_amount
+            return purchase_amount
         return ceil(purchase_amount / item_amount.doconvert())
+
+    def mk_product_dict(self, title_el):
+        product_id = title_el.get_attribute('id')
+        rate = self.driver.find_element_by_id(product_id + 'unitPer').text
+        price = self.driver.find_element_by_id(product_id + 'price').text
+        product = {
+                'id': product_id,
+                'price': self.parse_price(price),
+                'rate': self.parse_rate(rate),
+                'title': title_el.text
+                }
+        product['amount'] = product['price'] / product['rate'][0], product['rate'][1]
+        return product
+
+    def parse_rate(self, rate):
+        rate = re.split('.\D*(\d*\.?\d*) \/ (\w*).*', rate)[1:-1]
+        return float(rate[0]), homogenize_unit(rate[1])
+
+    def parse_price(self, price):
+        price = re.split('.\D*(\d*\.?\d*).*', price)
+        return float(price[1])
+
+    def get_qty(self, product, qty):
+        short_id = product['id'][2:]
+        self.element_getter(By.ID, 'addButton_' + short_id, 15).click()
+        self.element_getter(By.ID, 'qtyInfo_' + short_id, 10).click()
+        product = self.driver.find_element_by_id('qtyInfoControl_' + short_id)
+        product.send_keys(str(qty))
+        btn_name = 'specify-quantity-more.update-button'
+        update = self.driver.find_element_by_class_name(btn_name)
+        update.click()
+        update.click()
