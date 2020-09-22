@@ -33,9 +33,7 @@ class SafeWay:
         '''
         Signs into safeway.com using user_data.txt
         '''
-        with open('user_data.txt', 'r') as f:
-            user = f.readline()
-            password = f.readline()
+        user, password = self.get_user_data()
         # TODO make sure entire page loads before searching for elements
         sleep(5)  # waits for page to load
         self.element_getter(By.LINK_TEXT, 'Sign In / Up', 45).click()
@@ -44,6 +42,27 @@ class SafeWay:
         element = self.driver.find_element_by_id('label-password')
         element.send_keys(password)
         element.send_keys(Keys.ENTER)
+
+    def get_user_data(self):
+        '''
+        returns username and password. prompts user for data and
+        writes to file if not found.
+
+        Returns:
+            username and password as a tuple of strings. (user, pass)
+        '''
+        with open('user_data.txt', 'r+') as f:
+            user = f.readline()
+            if user == '':
+                print('User profile not found')
+                print('Please provide login info')
+                user = input('User name: ')
+                f.write(user)
+                password = input('Password: ')
+                f.write(password)
+            else:
+                password = f.readline()
+            return (user, password)
 
     def element_getter(self, by, value, delay):
         '''
