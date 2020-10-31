@@ -5,7 +5,7 @@ with open('README.md', 'r') as f:
 
 setuptools.setup(
         name='python-safeway',
-        version='0.0.0',
+        version='0.0.1',
         author='3point14thon',
         author_email='chris.alan.bowers@gmail.com',
         description='a safeway.com python API',
