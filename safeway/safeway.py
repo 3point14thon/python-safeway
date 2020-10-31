@@ -8,6 +8,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from unitconvert import massunits, volumeunits
+import safeway
+from safeway.__init__ import homogenize_unit
 
 
 class SafeWay:
@@ -50,13 +52,14 @@ class SafeWay:
         Returns:
             username and password as a tuple of strings. (user, pass)
         '''
-        with open('user_data.txt', 'r+') as f:
+        file_dir = safeway.__file__.replace('__init__.py', 'user_data.txt')
+        with open(file_dir, 'r+') as f:
             user = f.readline()
             if user == '':
                 print('User profile not found')
                 print('Please provide login info')
                 user = input('User name: ')
-                f.write(user)
+                f.write(user + '\n')
                 password = input('Password: ')
                 f.write(password)
             else:
@@ -196,7 +199,8 @@ class SafeWay:
             qty(int): amount of item to be added
         '''
         short_id = product['id'][2:]
-        self.element_getter(By.ID, 'addButton_' + short_id, 15).click()
+        self.element_getter(By.XPATH, '//quantity-stepper[@id="' + product['id'] + '-qty"]//div[@id="addButton"]', 15).click()
+        sleep(10)
         self.element_getter(By.ID, 'qtyInfo_' + short_id, 10).click()
         product = self.driver.find_element_by_id('qtyInfoControl_' + short_id)
         product.send_keys(str(qty))

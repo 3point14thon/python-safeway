@@ -29,3 +29,11 @@ def homogenize_unit(unit):
     ok_chars = '3abcfgiklmnopqstuz'
     unit = [char for char in unit if char in ok_chars]
     return ''.join(unit).rstrip('s')
+
+
+import safeway
+
+
+file_dir = safeway.__file__.replace('__init__.py', 'user_data.txt')
+with open(file_dir, 'a'):
+    pass
